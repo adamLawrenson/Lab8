@@ -1,8 +1,9 @@
-require 'rails_helper'
+equire 'rails_helper'
 
 RSpec.describe "Comments", type: :request do
   before(:each) do #This logins the user
     @user = FactoryBot.create(:user) # Create the user
+    @article = FactoryBot.create(:article)
 
     # Set up the basic premise of the test by making sure that you have to log in
     visit root_path
@@ -54,7 +55,7 @@ RSpec.describe "Comments", type: :request do
         expect(current_path).to eq(comment_path(@comment))
 
         expect(page).to have_content(@comment.message)
-        expect(page).to have_content(@comment.article)
+        expect(page).to have_content(@comment.article.title)
         # save_and_open_page
       end
     end
@@ -80,10 +81,10 @@ RSpec.describe "Comments", type: :request do
 
         fill_in 'comment_message', with: 'New_Comment'
 
-        choose('True')
+	check('comment_visible')
 
         # Cannot figure out how to select first article in dropdown
-        select first, from: 'comment[article_id]'
+        select @article.title, from: 'comment[article_id]'
 
         select @user.email, from: 'comment[user_id]'
         click_button 'Create Comment'
@@ -96,82 +97,88 @@ RSpec.describe "Comments", type: :request do
 
     describe 'invalid: ' do
       it 'should not create a new article with invalid attributes' do
-        click_link "Articles"
-        expect(current_path).to eq(articles_path)
+        click_link "Comments"
+        expect(current_path).to eq(comments_path)
 
-        click_link 'New Article'
-        expect(current_path).to eq(new_article_path)
+        click_link 'New Comment'
+        expect(current_path).to eq(new_comment_path)
 
-        fill_in 'article_title', with: ''
-        fill_in 'article_content', with: ''
-        select @user.email, from: 'article[user_id]'
-        click_button 'Create Article'
+        fill_in 'comment_message', with: ''
+
+        select @user.email, from: 'comment[user_id]'
+	select @article.title, from: 'comment[article_id]'
+        click_button 'Create Comment'
         # save_and_open_page
-        expect(page).to have_content("Title can't be blank")
-        expect(page).to have_content("Content can't be blank")
+        expect(page).to have_content("Message can't be blank")
       end
     end
   end
 
   describe 'GET #edit' do
     describe 'valid: ' do
-      it 'should update an article with valid attributes' do
-        @article = FactoryBot.create(:article)
-        click_link 'Articles'
-        expect(current_path).to eq(articles_path)
+      it 'should update a comment with valid attributes' do
+	@comment = FactoryBot.create(:comment)
+	click_link 'Comments'
+	expect(current_path).to eq(comments_path)
 
-        expect(page).to have_content(@article.title)
+        expect(page).to have_content(@comment.message)
 
         click_link "Show"
-        expect(current_path).to eq(article_path(@article))
+        expect(current_path).to eq(comment_path(@comment))
 
-        expect(page).to have_content(@article.title)
-        expect(page).to have_content(@article.content)
-        expect(page).to have_content(@article.user.email)
+        expect(page).to have_content(@article.message)
+        expect(page).to have_content(@comment.article.title)
 
         @new_user = FactoryBot.create(:user)
 
         click_link "Edit"
-        expect(current_path).to eq(edit_article_path(@article))
+        expect(current_path).to eq(edit_article_path(@comment))
 
-        fill_in 'article_title', with: 'Edited_Article_Title'
-        fill_in 'article_content', with: 'New_New_Article_Content'
-        select @new_user.email, from: 'article[user_id]'
-        click_button 'Update Article'
+        fill_in 'comment_message', with: 'Edited_New_Comment'
 
-        expect(page).to have_content('Article was successfully updated.')
-        expect(page).to have_content('Edited_Article_Title')
-        expect(page).to have_content('New_New_Article_Content')
-        expect(page).to have_content(@new_user.email)
-        expect(current_path).to eq(article_path(@article))
+	check('comment_visible')
+
+	select @article.title, from: 'comment[article_id]'
+
+	select @user.email, from: 'comment[user_id]'
+click_button 'Update Comment'
+
+	expect(page).to have_content('Comment was successfully updated.')
+	expect(page).to have_content('Edited_New_Comment')
+	expect(current_path).to eq(comment_path(@comment))
+
         # save_and_open_page
       end
     end
 
     describe 'invalid: ' do
       it 'should not update an article with invalid attributes' do
-        @article = FactoryBot.create(:article)
-        click_link 'Articles'
-        expect(current_path).to eq(articles_path)
+        @comment = FactoryBot.create(:article)
+        click_link 'Comments'
+        expect(current_path).to eq(comments_path)
 
-        expect(page).to have_content(@article.title)
+        expect(page).to have_content(@comment.message)
 
         click_link "Show"
-        expect(current_path).to eq(article_path(@article))
+        expect(current_path).to eq(comment_path(@comment))
 
-        expect(page).to have_content(@article.title)
-        expect(page).to have_content(@article.content)
-        expect(page).to have_content(@article.user.email)
+        expect(page).to have_content(@comment.message)
+	expect(page).to have_content(@comment.article.title)
+
+	@new_user = FactoryBot.create(:user)
 
         click_link "Edit"
-        expect(current_path).to eq(edit_article_path(@article))
+        expect(current_path).to eq(edit_comment_path(@comment))
 
-        fill_in 'article_title', with: ''
-        fill_in 'article_content', with: ''
-        click_button 'Update Article'
+        fill_in 'comment_message', with: ''
 
-        expect(page).to have_content("Title can't be blank")
-        expect(page).to have_content("Content can't be blank")
+        check('comment_visible')
+
+	select @article.title, from: 'comment[article_id]'
+	select @user.email, from: 'comment[user_id]'
+	click_button 'Update Comment'
+
+	expect(page).to have_content("Message can't be blank")
         # save_and_open_page
       end
     end
@@ -179,16 +186,16 @@ RSpec.describe "Comments", type: :request do
 
   describe "DELETE #destroy" do
     describe 'valid: ' do
-      it 'should destroy an article when destroy is clicked' do
-        @article = FactoryBot.create(:article)
-        click_link 'Articles'
-        expect(current_path).to eq(articles_path)
+      it 'should destroy a comment when destroy is clicked' do
+        @comment = FactoryBot.create(:comment)
+        click_link 'Comments'
+        expect(current_path).to eq(comments_path)
 
-        expect(page).to have_content(@article.title)
+        expect(page).to have_content(@comment.message)
         click_link 'Destroy'
 
-        expect(current_path).to eq(articles_path)
-        expect(page).to have_content("Article was successfully destroyed.")
+        expect(current_path).to eq(comments_path)
+        expect(page).to have_content("Comment was successfully destroyed.")
       end
     end
   end
